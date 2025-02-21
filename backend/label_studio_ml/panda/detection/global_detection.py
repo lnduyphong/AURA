@@ -1,27 +1,134 @@
-import torch
+import torch 
+import torch.nn.functional as F
+from model import *
+import numpy as np
+from loss import *
+from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, TensorDataset
+from scipy.stats import entropy
+import pandas as pd
 
-def global_detection(noise_instances, clean_instances, iteration: int):
-    clean_features = clean_instances.iloc[:, :-1].values
-    clean_labels = clean_instances.iloc[:, -1].values
-    
-    noise_features = noise_instances.iloc[:, :-1].values
-    noise_labels = noise_instances.iloc[:, -1].values
-    
-    X_test = torch.tensor(noise_features, dtype=torch.float32)
-    y_test = noise_labels
-    
-    model = self.initiate_neural_net(clean_features, clean_labels)
 
-    model.eval()
-    with torch.no_grad():
-        pred = model(X_test.to(self.device))
-        pred_labels = pred.argmax(dim=1).cpu().numpy()
+print_freq = 50
+batch_size = 128
+num_iter_per_epoch = 400
+n_epoch = 200
+learning_rate = 0.001
+forget_rate = 0.25
+rate_schedule = np.ones(n_epoch)*forget_rate
+num_gradual = 10
+exponent = 3
+rate_schedule[:num_gradual] = np.linspace(0, forget_rate**exponent, num_gradual)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # true_label = pd.Series(raw_labels).iloc[self.noise_indices]
+def accuracy(logit, target, topk=(1,)):
+    output = F.softmax(logit, dim=1)
+    maxk = max(topk)
+    batch_size = target.size(0)
+
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        res.append(correct_k.mul_(100.0 / batch_size))
+    return res
+
+def train(dataset, noise_indices, epoch, model1, optimizer1, model2, optimizer2):
+    clean_instances = dataset.drop(noise_indices)
+    
+    X_train, y_train = clean_instances.iloc[:, :-1].values, clean_instances.iloc[:, -1].values
+
+    X_train = torch.tensor(X_train, dtype=torch.float32)
+    y_train = torch.tensor(y_train, dtype=torch.long)
+
+    train_data = TensorDataset(X_train, y_train)
+    train_loader = DataLoader(train_data, batch_size=128)
+
+    model1.train()
+    model2.train()
+    
+    train_total=0
+    train_correct1=0 
+    train_correct2=0 
+    
+    for X_batch, y_batch in train_loader:
+        X_batch, y_batch = X_batch.to(device), y_batch.to(device)
         
-    # for i in range(len(pred_labels)):
-    #     print("Pred:", pred_labels[i].tolist(), "Refined:", y_test[i].tolist(), "TrueLabel:", true_label.iloc[i], "Result:", y_test[i]==pred_labels[i])
+        logits1 = model1(X_batch)
+        acc1 = accuracy(logit=logits1, target=y_batch)
+        
+        logits2 = model2(X_batch)
+        acc2 = accuracy(logit=logits2, target=y_batch)
+        
+        loss1, loss2 = loss_coteaching(logits1, logits2, y_batch, rate_schedule[epoch])
+        
+        optimizer1.zero_grad()
+        loss1.backward()
+        optimizer1.step()
+        
+        optimizer2.zero_grad()
+        loss2.backward()
+        optimizer2.step()
+        
+        train_total += 1
+        train_correct1 += acc1[0]
+        train_correct2 += acc2[0]
+
+    return train_correct1 / train_total, train_correct2 / train_total
+
+def correct_noise_subset(dataset, noise_indices, model1, model2, is_last=False):
+    noise_instances = dataset.iloc[noise_indices]
     
-    noise_indices = noise_indices[(pred_labels != y_test)]
+    X_test, y_test = noise_instances.iloc[:, :-1].values, noise_instances.iloc[:, -1].values
     
-    return noise_indices
+    X_test = torch.tensor(X_test, dtype=torch.float32).to(device)
+    
+    with torch.no_grad():
+        logits1 = model1(X_test)
+        logits2 = model2(X_test)
+        
+        avg_logits = (logits1 + logits2) / 2
+        predicted_labels = avg_logits.argmax(axis=1).cpu()
+        confidence = 1 - entropy(avg_logits.T.cpu())
+        
+    difference_mask = (predicted_labels != y_test)
+    low_confidence_mask = confidence < np.percentile(confidence, 90)
+    # if is_last == True:
+    #     low_confidence_mask = confidence < 9999
+    
+    y_test[difference_mask & ~low_confidence_mask] = predicted_labels[difference_mask & ~low_confidence_mask]
+    noise_indices = noise_instances.index[difference_mask & low_confidence_mask]
+    return noise_indices, y_test
+    
+
+def global_detection(dataset, noise_indices, max_iters: int):
+    mlp1 = NeuralNetwork(dataset.shape[1] - 1, 10).to(device)
+    mlp2 = LeakyNeuralNetwork(dataset.shape[1] - 1, 10).to(device)
+    
+    optimizer1 = torch.optim.Adam(mlp1.parameters(), lr=learning_rate)
+    optimizer2 = torch.optim.Adam(mlp2.parameters(), lr=learning_rate)
+    
+    for interation in range(max_iters):
+        train_acc1, train_acc2 = train(dataset, noise_indices, interation, mlp1, optimizer1, mlp2, optimizer2)
+        print(f"Iteration {interation}: Train Acc1: {train_acc1}, Train Acc2: {train_acc2}")
+        old_noise_indices = noise_indices
+        if interation == max_iters - 1:
+            noise_indices, new_label = correct_noise_subset(dataset, noise_indices, mlp1, mlp2, is_last=True)
+        else:
+            noise_indices, new_label = correct_noise_subset(dataset, noise_indices, mlp1, mlp2)
+        dataset.loc[old_noise_indices, "weak_label"] = new_label
+    return dataset
+
+if __name__ == "__main__":
+    dataset = pd.read_csv("backend/label_studio_ml/panda/test/cifar_dino.csv")
+    noise_indices = dataset[dataset["label"] != dataset["weak_label"]].index
+    
+    print("Clean rate:", np.mean(dataset["label"] == dataset["weak_label"]) * 100, "%")
+    clean_labels = dataset["label"]
+    
+    dataset = dataset.drop(["label"], axis=1)
+    dataset = global_detection(dataset, noise_indices, max_iters=25)
+    print("Clean rate:", np.mean(clean_labels == dataset.iloc[:, -1].values) * 100, "%")
