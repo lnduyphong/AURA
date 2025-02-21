@@ -132,3 +132,5 @@ dmypy.json
 .github/actions-hub
 
 .idea/
+
+label_studio_ml/panda/test

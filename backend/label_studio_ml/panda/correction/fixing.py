@@ -1,6 +1,7 @@
 import numpy as np
+import pandas as pd
+from backend.label_studio_ml.panda.data_processing.feature_extraction import extract_text_feature
 from deCo import DeCoTool
-from FeatureExtraction import *
 
 
 def run(data):
