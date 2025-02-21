@@ -1,8 +1,8 @@
 import torch 
 import torch.nn.functional as F
-from model import *
+from panda.detection.model import *
 import numpy as np
-from loss import *
+from panda.detection.loss import *
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 from scipy.stats import entropy
@@ -104,7 +104,7 @@ def correct_noise_subset(dataset, noise_indices, model1, model2, is_last=False):
     return noise_indices, y_test
     
 
-def global_detection(dataset, noise_indices, max_iters: int):
+def run(dataset, noise_indices, max_iters: int):
     mlp1 = NeuralNetwork(dataset.shape[1] - 1, 10).to(device)
     mlp2 = LeakyNeuralNetwork(dataset.shape[1] - 1, 10).to(device)
     
