@@ -3,15 +3,12 @@ import torch.nn.functional as F
 from panda.detection.model import *
 import numpy as np
 from panda.detection.loss import *
-from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 from scipy.stats import entropy
 import pandas as pd
 
 
-print_freq = 50
-batch_size = 128
-num_iter_per_epoch = 400
+
 n_epoch = 200
 learning_rate = 0.001
 forget_rate = 0.25
@@ -36,7 +33,7 @@ def accuracy(logit, target, topk=(1,)):
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
-def train(dataset, noise_indices, epoch, model1, optimizer1, model2, optimizer2):
+def train(dataset, noise_indices, epoch, model1, optimizer1, model2, optimizer2, n_labels):
     clean_instances = dataset.drop(noise_indices)
     
     X_train, y_train = clean_instances.iloc[:, :-1].values, clean_instances.iloc[:, -1].values
@@ -45,7 +42,7 @@ def train(dataset, noise_indices, epoch, model1, optimizer1, model2, optimizer2)
     y_train = torch.tensor(y_train, dtype=torch.long)
 
     train_data = TensorDataset(X_train, y_train)
-    train_loader = DataLoader(train_data, batch_size=128)
+    train_loader = DataLoader(train_data, batch_size=64, drop_last=True, shuffle=True)
 
     model1.train()
     model2.train()
@@ -63,7 +60,7 @@ def train(dataset, noise_indices, epoch, model1, optimizer1, model2, optimizer2)
         logits2 = model2(X_batch)
         acc2 = accuracy(logit=logits2, target=y_batch)
         
-        loss1, loss2 = loss_coteaching(logits1, logits2, y_batch, rate_schedule[epoch])
+        loss1, loss2 = loss_coteaching(logits1, logits2, y_batch, rate_schedule[epoch], n_labels)
         
         optimizer1.zero_grad()
         loss1.backward()
@@ -104,21 +101,23 @@ def correct_noise_subset(dataset, noise_indices, model1, model2, is_last=False):
     return noise_indices, y_test
     
 
-def run(dataset, noise_indices, max_iters: int):
-    mlp1 = NeuralNetwork(dataset.shape[1] - 1, 10).to(device)
-    mlp2 = LeakyNeuralNetwork(dataset.shape[1] - 1, 10).to(device)
+def run(dataset, noise_indices, n_labels, max_iters: int = 10):
+    model1 = RobustNeuralNetwork(dataset.shape[1] - 1, n_labels).to(device)
+    model2 = LeakyNeuralNetwork(dataset.shape[1] - 1, n_labels).to(device)
     
-    optimizer1 = torch.optim.Adam(mlp1.parameters(), lr=learning_rate)
-    optimizer2 = torch.optim.Adam(mlp2.parameters(), lr=learning_rate)
+    optimizer1 = torch.optim.Adam(model1.parameters(), lr=learning_rate)
+    optimizer2 = torch.optim.Adam(model2.parameters(), lr=learning_rate)
     
     for interation in range(max_iters):
-        train_acc1, train_acc2 = train(dataset, noise_indices, interation, mlp1, optimizer1, mlp2, optimizer2)
+        if len(noise_indices) <= 1:
+            break
+        train_acc1, train_acc2 = train(dataset, noise_indices, interation, model1, optimizer1, model2, optimizer2, n_labels)
         print(f"Iteration {interation}: Train Acc1: {train_acc1}, Train Acc2: {train_acc2}")
         old_noise_indices = noise_indices
         if interation == max_iters - 1:
-            noise_indices, new_label = correct_noise_subset(dataset, noise_indices, mlp1, mlp2, is_last=True)
+            noise_indices, new_label = correct_noise_subset(dataset, noise_indices, model1, model2, is_last=True)
         else:
-            noise_indices, new_label = correct_noise_subset(dataset, noise_indices, mlp1, mlp2)
+            noise_indices, new_label = correct_noise_subset(dataset, noise_indices, model1, model2)
         dataset.loc[old_noise_indices, "weak_label"] = new_label
     return dataset
 
@@ -130,5 +129,5 @@ if __name__ == "__main__":
     clean_labels = dataset["label"]
     
     dataset = dataset.drop(["label"], axis=1)
-    dataset = global_detection(dataset, noise_indices, max_iters=25)
+    dataset = run(dataset, noise_indices, max_iters=25)
     print("Clean rate:", np.mean(clean_labels == dataset.iloc[:, -1].values) * 100, "%")

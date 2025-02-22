@@ -28,7 +28,7 @@ def run(tasks: List[Dict], label_config):
     map_labels = np.array([label_mapping[label] for label in labeled_data])
     raw_data['weak_label'] = map_labels   
     data = raw_data.drop(['anoda_label'], axis=1)
-    noise_instances, clean_instances, noise_indices = local_detection.run(data, n_labels)
+    noise_indices = local_detection.run(data, n_labels)
     # print(f"noise {noise_intances}")
     # print(f"clean {clean_instance}")
     noise = global_detection.run(data, noise_indices, n_labels)
