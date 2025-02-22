@@ -9,7 +9,9 @@ from openai import OpenAI
 import pandas as pd
 import json
 
-client = OpenAI()
+OPENAI_API_KEY = "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"
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 class agent:
     def __init__(self, model_name, labels):

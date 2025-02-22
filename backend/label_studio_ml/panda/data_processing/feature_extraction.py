@@ -26,7 +26,7 @@ def extract_text_feature(dataset, batch_size, encode_model):
     print(f"Using device: {device}")
         
     tokenizer = AutoTokenizer.from_pretrained(encode_model)
-    model = AutoModel.from_pretrained(encode_model).to(device)
+    model = AutoModel.from_pretrained(encode_model, trust_remote_code=True).to(device)
     
     embeddings = []
     labels = []
