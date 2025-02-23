@@ -2,13 +2,15 @@ from panda.data_processing.data import NewData
 from panda.data_processing.feature_extraction import extract_text_feature
 from panda.detection import local_detection
 from panda.detection import global_detection
+from panda.correction import label_correction
 
 import pandas as pd
 import numpy as np
 
 
 def run():
-    data_df = pd.read_csv("backend/label_studio_ml/panda/test/agnews3k2.csv")
+    data_df = pd.read_csv("backend/label_studio_ml/panda/test/agnews.csv")
+    print(data_df)
     labels = np.unique(data_df["label"].values)
     n_labels = len(labels)
     type_data = "text"
@@ -25,11 +27,13 @@ def run():
     
     
     raw_data['weak_label'] = llm_labels
-    # detected_noise_indices = local_detection.run(raw_data, n_labels, k_neighbors=13)
-    detected_noise_indices = noise_indices
+    detected_noise_indices = local_detection.run(raw_data, n_labels, k_neighbors=25)
+    # detected_noise_indices = noise_indices
     print_results(noise_indices, detected_noise_indices)
     
-    fixed_data = global_detection.run(raw_data.copy(), detected_noise_indices, n_labels, max_iters=50)
+    p1, p2, p3 = global_detection.run(raw_data.copy(), detected_noise_indices, n_labels, num_epochs=100)
+    agent = label_correction.DeterministicAgent(raw_data.copy(), p1, p2, p3)
+    fixed_data = agent.make_decision()
     print_results(noise_indices, detected_noise_indices, raw_data, fixed_data, clean_labels)
 
 def print_results(noise_indices, detected_noise_indices, raw_data=None, fixed_data=None, clean_labels=None):
