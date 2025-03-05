@@ -105,17 +105,15 @@ def run(data, n_labels, k_neighbors=10):
             vec_i = X[i]
             vec_j = X[neighbor_idx]
             
-            # Compute cosine similarity
             dot_product = np.dot(vec_i, vec_j)
             norm_i = np.linalg.norm(vec_i)
             norm_j = np.linalg.norm(vec_j)
             cos_sim = dot_product / (norm_i * norm_j + 1e-10)
-            cos_sim = np.abs(cos_sim)  # Use absolute value for weighting
+            cos_sim = np.abs(cos_sim)
 
             weighted_votes[neighbor_labels[j]] += cos_sim
             weight_sum += cos_sim
 
-        # Handle zero weight_sum case
         if weight_sum < 1e-10:
             weighted_probs = np.ones(n_labels) / n_labels
         else:
