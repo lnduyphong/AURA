@@ -9,7 +9,7 @@ from openai import OpenAI
 import pandas as pd
 import json
 
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -40,55 +40,47 @@ class agent:
 
         return response.choices[0].message.content
     
-    def generate_prompt(self):
-        meta_prompt = """
-            Generate a structured prompt for an AI model to classify a given text into predefined categories.  
-            The prompt should instruct the model to categorize the text based on a list of labels and provide a justification.  
-            You will be provided with a text, and you will output a JSON object containing the following information:
-            The generated prompt should follow this format:
-            Prompt: <your_pormpt>
- 
-            Example:            
-            Prompt:
-                Classify the following text as one of the following types: {{self.labels}}
-                {{extra_infos}}
-                Provide the classification first, followed by a short justification.
-                Text: "{{text}}"
-                You will be provided with a text, and you will output a JSON object containing the following information:
-                Format:
-                Label: <your_predicted_label>
-                Explanation: <your_justification>
-            
-            Ensure that the generated prompt is clear, concise, and structured for effective AI response.
-        """
-        response = self.query(meta_prompt, meta_prompt)
-        response = json.loads(response)
-        # print(type(response))
-        characteristics = response["Prompt"]
-        return characteristics
 
     
     def find_information(self):
         prompt = f"""
-            Write extra information describing the labels of the dataset following this structure:
-            Characteristics:
-                Jasmine rice is long and slender in shape, white with a slightly translucent appearance in color.  
-                Karacadag rice is short and slightly oval in shape, white, but more opaque than Jasmine rice.  
-                Ipsala rice is medium grain and slightly elongated, white and slightly opaque in color.  
-                Arborio rice is short and plump in shape, white and highly opaque in color.  
-                Basmati rice is extra-long, slender, and slightly tapered at the ends in shape, white with a pearly luster in color.  
-            The labels that need descriptions are {self.labels}.
+            Your task is to extract and provide structured information for each dataset label.  
+            Focus on identifying key **visual** and **textual** attributes that define each label.  
+
+            **Requirements:**  
+            - Identify and extract **keywords** related to each label.  
+            - Describe the **key characteristics** based on image or text representation.  
+            - Specify important **properties**: keywords, content type if text-based).  
+            - Ensure that the descriptions are precise, factual, and relevant.  
             You will be provided with a text, and you will output a JSON object containing the following information:
-            Format:
-            Characteristics: <information describing the labels >
+            **Format:**  
+            {{
+                "Characteristics": {{
+                    "<label_1>": {{
+                        "Keywords": "<comma-separated keywords>",
+                        "Description": "<detailed and accurate description>",
+                        "Properties": "<specific visual or textual properties>"
+                    }},
+                    "<label_2>": {{
+                        "Keywords": "<comma-separated keywords>",
+                        "Description": "<detailed and accurate description>",
+                        "Properties": "<specific visual or textual properties>"
+                    }},
+                    ...
+                }}
+            }}
+
+            The labels that require descriptions are: {self.labels}.  
+            Ensure that each entry contains structured and well-defined information.  
         """
+
         text = f"""
-        You need to find extra information about the labels: {self.labels} in the dataset and describe them in a structured format. 
-        Each label should have a clear and structured description, detailing its characteristics, typical topics, and common themes. 
+        Identify and generate precise information for the dataset labels: {self.labels}.  
+        Extract **keywords, characteristics, and properties** based on image or text representation.  
         """
+
         response = self.query(prompt, text)
         response = json.loads(response)
-        # print(type(response))
         characteristics = response["Characteristics"]
         return characteristics
     

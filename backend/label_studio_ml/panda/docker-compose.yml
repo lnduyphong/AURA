@@ -3,30 +3,26 @@ version: "3.8"
 services:
   ml-backend:
     container_name: ml-backend
-    image: humansignal/ml-backend:v0
     build:
       context: .
+      dockerfile: Dockerfile
       args:
         TEST_ENV: ${TEST_ENV}
     environment:
-      # specify these parameters if you want to use basic auth for the model server
+      # Basic authentication for the model server
       - BASIC_AUTH_USER=
       - BASIC_AUTH_PASS=
-      # set the log level for the model server
+      # Set the log level for the model server
       - LOG_LEVEL=DEBUG
-      # any other parameters that you want to pass to the model server
+      # Additional parameters for the model server
       - ANY=PARAMETER
-      # specify the number of workers and threads for the model server
+      # Specify the number of workers and threads for the model server
       - WORKERS=1
       - THREADS=8
-      # specify the model directory (likely you don't need to change this)
+      # Define the model directory
       - MODEL_DIR=/data/models
 
-      # Specify the Label Studio URL and API key to access
-      # uploaded, local storage and cloud storage files.
-      # Do not use 'localhost' as it does not work within Docker containers.
-      # Use prefix 'http://' or 'https://' for the URL always.
-      # Determine the actual IP using 'ifconfig' (Linux/Mac) or 'ipconfig' (Windows).
+      # Label Studio configuration
       - LABEL_STUDIO_URL=http://localhost:8080
       - LABEL_STUDIO_API_KEY=trucxinh
       - BASELINE_MODEL_NAME=auto-labeling
@@ -35,3 +31,8 @@ services:
       - "9090:9090"
     volumes:
       - "./data/server:/data"
+      # - "./cifar10:/app/panda/cifar10" 
+      - "./correction:/app/panda/correction"
+      - "./data_processing:/app/panda/data_processing"
+      - "./detection:/app/panda/detection"
+      - "./labeling:/app/panda/labeling"

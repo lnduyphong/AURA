@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from panda.detection import network
 import numpy as np
 from panda.detection import loss
+from panda.detection import network
 from torch.utils.data import DataLoader, TensorDataset
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -41,31 +42,38 @@ def run(dataset, noise_indices, n_labels,
         exponent=1, 
         percentile=5, 
         max_iters = 100, 
-        raw_labels=None,
+        # raw_labels=None,
         actual_noise_indices=None):
     repaired_indices = []
+    features = dataset.drop(['weak_label', 'label'], axis=1)
+    raw_labels = dataset['weak_label']
+    repaired_indices = []
     for iteration in range(max_iters):
+        if len(noise_indices) == 0:
+            break
         rate_schedule = np.ones(max_epochs)*forget_rate
         rate_schedule[:num_gradual] = np.linspace(0, forget_rate**exponent, num_gradual)
         
-        model1 = network.RobustNeuralNetwork(dataset.shape[1] - 1, n_labels).to(device)
-        model2 = network.RobustNeuralNetwork(dataset.shape[1] - 1, n_labels).to(device)
-        model3 = network.RobustNeuralNetwork(dataset.shape[1] - 1, n_labels).to(device)
-        
+        model1 = network.RobustNeuralNetwork(features.shape[1], n_labels).to(device)
+        model2 = network.RobustNeuralNetwork(features.shape[1], n_labels).to(device)
+        model3 = network.RobustNeuralNetwork(features.shape[1], n_labels).to(device)
+
         optimizer1 = torch.optim.Adam(model1.parameters(), lr=learning_rate)
         optimizer2 = torch.optim.Adam(model2.parameters(), lr=learning_rate)
         optimizer3 = torch.optim.Adam(model3.parameters(), lr=learning_rate)
         
-        clean_samples = dataset.drop(noise_indices)
-        
-        X_train, X_val, y_train, y_val = train_test_split(clean_samples.iloc[:, :-1].values, clean_samples.iloc[:,-1].values, test_size=0.2)
+        clean_samples = dataset.drop(noise_indices, axis=0)
+        clean_features = clean_samples.drop(['weak_label', 'label'], axis=1)
+        clean_lbs = clean_samples['weak_label']        
+        X_train, X_val, y_train, y_val = train_test_split(clean_features.values, clean_lbs.values, test_size=0.2)
         # X_train, y_train = mixup(X_train, y_train)
         
         X_train, y_train = torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.long)
         X_val, y_val = torch.tensor(X_val, dtype=torch.float32), torch.tensor(y_val, dtype=torch.long)
         
-        X_reserve = dataset.iloc[noise_indices,:-1].copy()
-        
+        noise_data = dataset.iloc[noise_indices]
+        X_reserve = noise_data.drop(['weak_label', 'label'], axis=1)    
+
         train_data = TensorDataset(X_train, y_train)
         train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
         
@@ -171,8 +179,8 @@ def run(dataset, noise_indices, n_labels,
         model2.load_state_dict(best_models[1])
         model3.load_state_dict(best_models[2])
         
-        X_test = dataset.iloc[noise_indices, :-1].values
-        y_test = dataset.iloc[noise_indices, -1].values
+        X_test = noise_data.drop(['weak_label', 'label'], axis=1).values
+        y_test = noise_data['weak_label'].values
         
         logits1 = model1(torch.Tensor(X_test).to(device)).detach().cpu().numpy()
         logits2 = model2(torch.Tensor(X_test).to(device)).detach().cpu().numpy()
@@ -185,13 +193,14 @@ def run(dataset, noise_indices, n_labels,
 
         differing_labels_mask = (predictions != y_test)
         differing_entropies = pred_entropy[differing_labels_mask]
-        
+        if len(differing_entropies) == 0:
+            break
         low_entropy_threshold = np.percentile(differing_entropies, percentile)
         low_entropy_indices = differing_labels_mask & (pred_entropy <= low_entropy_threshold)
         low_entropy_sample_indices = X_reserve[low_entropy_indices].index
         
         repaired_indices.extend(low_entropy_sample_indices.tolist())
-        dataset.loc[low_entropy_sample_indices, dataset.columns[-1]] = predictions[low_entropy_indices]
+        dataset.loc[low_entropy_sample_indices, 'weak_label'] = predictions[low_entropy_indices]
         
         noise_indices = X_reserve[differing_labels_mask & (pred_entropy > low_entropy_threshold)].index
         
@@ -202,7 +211,7 @@ def run(dataset, noise_indices, n_labels,
         
         precision = len(correct_detection_indices) / len(all_noisy_indices)
         recall = len(correct_detection_indices) / len(actual_noise_indices)
-        F1 = 2 * precision * recall / (precision + recall)
+        F1 = 2 * precision * recall / (precision + recall + 0.000001)
         
         print(f'Post Process metrics:')
         print(f'Iteration: {iteration}')

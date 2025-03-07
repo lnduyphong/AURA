@@ -4,6 +4,12 @@ import json
 import logging
 import logging.config
 
+import sys
+sys.path.append('/app')
+sys.path.append('/app/panda')
+sys.path.append('/app/label_studio_ml')
+
+
 # Set a default log level if LOG_LEVEL is not defined
 log_level = os.getenv("LOG_LEVEL", "INFO")
 

@@ -3,37 +3,98 @@ from panda.data_processing.feature_extraction import extract_text_feature
 from panda.detection import local_detection
 from panda.detection import global_detection
 from panda.labeling import controller
-from panda.correction import inject_noise
+from response import ModelResponse
+
+# from panda.correction import inject_noise
 
 from typing import Dict, List, Optional
 import pandas as pd
 import numpy as np
 
+def create_data(tasks: List[Dict], label_config):
+  data = NewData(tasks, label_config)
+  data_df = data.create_df()
+  labels = data.get_labels()
+  type_data = data.get_type()
+
+  # print(data_df['id'])
+  # return data_df
+
+  labeled_data = controller.run(dataset=data_df, model_name='gpt-3.5-turbo', labels=labels)
+  embed_vt = extract_text_feature(dataset=data_df, batch_size=256, encode_model="facebook/bart-base")
+  raw_data = pd.DataFrame(embed_vt)
+  
+  label_mapping = {label: idx for idx, label in enumerate(np.unique(labeled_data))}
+  map_labels = np.array([label_mapping[label] for label in labeled_data])
+  raw_data['weak_label'] = map_labels   
+  raw_data['label'] = data_df['label']   
+
+  return raw_data, labels, type_data
+
+def print_results(noise_indices, detected_noise_indices, raw_data=None, fixed_data=None, clean_labels=None):
+  correct_detection_indices = [index for index in detected_noise_indices if index in noise_indices]
+  wrong_detection_indices = [index for index in detected_noise_indices if index not in noise_indices]
+  
+  precision = len(correct_detection_indices) / len(detected_noise_indices) if len(detected_noise_indices) > 0 else 1.0
+  recall = len(correct_detection_indices) / len(noise_indices) if len(noise_indices) > 0 else 1.0
+  F1 = 2 * precision * recall / (precision + recall) if recall + precision > 0 else 0
+  
+  print("--------------------------------------------")
+  print(f'Precision: {round(precision, 3)}')
+  print(f'Recall: {round(recall, 3)}')
+  print(f'F1: {round(F1, 3)}')
+  print("--------------------------------------------")
+  print(f'Total noise instances: {len(noise_indices)}')
+  print(f'Wrongly detected noise: {len(wrong_detection_indices)}')
+  print(f'Correctly detected noise: {len(correct_detection_indices)}')
+  print("--------------------------------------------")
+  if raw_data is not None:
+      print("Correct annotation rate:", np.mean(clean_labels == fixed_data.iloc[:, -1].values) * 100, "%")
+      print("Repaired samples:", np.sum(fixed_data.iloc[:, -1].values != raw_data.iloc[:, -1].values))
+      print("Correct repaired samples:", np.sum((fixed_data.iloc[:, -1].values != raw_data.iloc[:, -1].values) & (clean_labels == fixed_data.iloc[:, -1].values)))
+      print("--------------------------------------------")
+  
 
 def run(tasks: List[Dict], label_config):
-    data = NewData(tasks, label_config)
-    data_df = data.create_df()
-    labels = data.get_labels()
+    data, labels, type_data = create_data(tasks, label_config)
     n_labels = len(labels)
-    type_data = data.get_type()
-    print(data_df)
-    print(labels)
-    print(type_data)
-    labeled_data = controller.run(dataset=data_df, model_name='gpt-4o', labels=labels)
-    embed_vt = extract_text_feature(dataset=data_df, batch_size=256, encode_model="facebook/bart-base")
-    raw_data = pd.DataFrame(embed_vt)
-    raw_data['anoda_label'] = labeled_data
+    print(data, labels, type_data)
+        
+    clean_labels = data["label"]
+    llm_labels = data["weak_label"].astype('int').values.copy()
+    noise_indices = data[data["label"] != data["weak_label"]].index
     
-    label_mapping = {label: idx for idx, label in enumerate(np.unique(labeled_data))}
-    map_labels = np.array([label_mapping[label] for label in labeled_data])
-    raw_data['weak_label'] = map_labels   
-    data = raw_data.drop(['anoda_label'], axis=1)
-    noise_indices = local_detection.run(data, n_labels)
-    # print(f"noise {noise_intances}")
-    # print(f"clean {clean_instance}")
-    noise = global_detection.run(data, noise_indices, n_labels)
-    # caigido = inject_noise.run(data, noise, n_labels)
-    print(noise)
+    print("Clean rate:", np.mean(data["label"] == data["weak_label"]) * 100, "%")
+   
+    
+    detected_noise_indices = local_detection.run(data.copy(), n_labels, k_neighbors=3)
+    print_results(noise_indices, detected_noise_indices)
+
+    fixed_data = global_detection.run(data.copy(), detected_noise_indices, n_labels, max_epochs=100, percentile=5, actual_noise_indices=noise_indices)
+
+    # # noise = global_detection.run(data, noise_indices, n_labels)
+    # # caigido = inject_noise.run(data, noise, n_labels)
+    # print(noise)
+    results = []
+    for i in range(fixed_data.shape[0]):
+        prediction_result = {
+            "model_version": "test",
+            "result": [
+                {
+                    "from_name": "sentiment",
+                    "id": i,  
+                    "to_name": "text",
+                    "type": "choices",
+                    "value": {
+                        "choices": fixed_data['weak_label'][i]
+                    }
+                }
+            ],
+            "score": 0
+        }
+        results.append(prediction_result)
+    print(results)
+    return {"results": results}
 tasks = [
     {
       "id": 6,

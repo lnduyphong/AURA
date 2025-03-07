@@ -8,16 +8,47 @@ import json
 from openai import OpenAI
 import pandas as pd
 import json
+import base64
 
-client = OpenAI()
 
+OPENAI_API_KEY = "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"
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 class agent:
-    def __init__(self, model_name, dataset_name, labels):
+    def __init__(self, model_name, labels):
         self.model_name = model_name
-        self.dataset_name = dataset_name
         self.labels = labels
 
-    def query(self, prompt, content):
+    def query(self, prompt, image_path):
+        
+        def encode_image(image_path):
+            with open(image_path, "rb") as image_file:
+                return base64.b64encode(image_file.read()).decode("utf-8")
+    
+        base64_image = encode_image(image_path)
+        response = client.chat.completions.create(
+            model=self.model_name,
+            temperature=0.1,
+            messages=[
+                {"role": "system", "content": prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                        }
+                    ],
+                }
+            ],
+            response_format={ 
+                "type": "json_object"
+             }    
+        )
+        # time.sleep(0.5)
+        return response.choices[0].message.content
+
+    def query_text(self, prompt, content):
         response = client.chat.completions.create(
         model=self.model_name,
         temperature=0.1,
@@ -36,80 +67,72 @@ class agent:
             }
         ],
         )
-
+        # time.sleep(0.5)
         return response.choices[0].message.content
     
     def find_information(self):
         prompt = f"""
-            Write extra information describing the labels of the {self.dataset_name} dataset following this structure:
-            Characteristics:
-                Jasmine rice is long and slender in shape, white with a slightly translucent appearance in color.  
-                Karacadag rice is short and slightly oval in shape, white, but more opaque than Jasmine rice.  
-                Ipsala rice is medium grain and slightly elongated, white and slightly opaque in color.  
-                Arborio rice is short and plump in shape, white and highly opaque in color.  
-                Basmati rice is extra-long, slender, and slightly tapered at the ends in shape, white with a pearly luster in color.  
-            The labels that need descriptions are {self.labels}.
+            Your task is to extract and provide structured information for each dataset label.  
+            Focus on identifying key **visual** and **textual** attributes that define each label.  
+
+            **Requirements:**  
+            - Identify and extract **keywords** related to each label.  
+            - Describe the **key characteristics** based on image representation.  
+            - Specify important **properties** (such as color, shape, texture if image-based.  
+            - Ensure that the descriptions are precise, factual, and relevant.  
             You will be provided with a text, and you will output a JSON object containing the following information:
-            Format:
-            Characteristics: <information describing the labels >
+            **Format:**  
+            {{
+                "Characteristics": {{
+                    "<label_1>": {{
+                        "Keywords": "<comma-separated keywords>",
+                        "Description": "<detailed and accurate description>",
+                        "Properties": "<specific visual or textual properties>"
+                    }},
+                    "<label_2>": {{
+                        "Keywords": "<comma-separated keywords>",
+                        "Description": "<detailed and accurate description>",
+                        "Properties": "<specific visual or textual properties>"
+                    }},
+                    ...
+                }}
+            }}
+
+            The labels that require descriptions are: {self.labels}.  
+            Ensure that each entry contains structured and well-defined information.  
         """
+
         text = f"""
-        You need to find extra information about the labels: {self.labels} in the {self.dataset_name} dataset and describe them in a structured format. 
-        Each label should have a clear and structured description, detailing its characteristics, typical topics, and common themes. 
+        Identify and generate precise information for the dataset labels: {self.labels}.  
+        Extract **keywords, characteristics, and properties** based on image representation.  
         """
-        response = self.query(prompt, text)
+
+        response = self.query_text(prompt, text)
         response = json.loads(response)
-        # print(type(response))
         characteristics = response["Characteristics"]
         return characteristics
     
-    def annotator_task(self, text, extra_infos):
+    def annotator_task(self, image, extra_infos):
         prompt = f"""
             Classify the following text as one of the following types: {self.labels}
             {extra_infos}
             Provide the classification first, followed by a short justification.
-            Text: "{text}"
+            Image: "{image}"
             You will be provided with a text, and you will output a JSON object containing the following information:
             Format:
             Label: <your_predicted_label>
             Explanation: <your_justification>
         """
-        response = self.query(prompt, text)
-        response = json.loads(response)
-        # print(type(response))
-        label = response["Label"]
-        explantion = response["Explanation"]
-        return label, explantion
+        response = self.query(prompt, image)
+            
+        if response is None:
+            return "Unknown", "Query response was None"
     
-    def challenger_task(self, text, annotation, explanation):
-        prompt = f"""
-        Text: "{text}"
-        The given text has been classified as "{annotation}".
-        Explanation provided: {explanation}
-        Your task is to challenge this classification. Identify any possible misclassification, ambiguity, or alternative classification with one of the following types: {self.labels}. Only use the provided types.
-        You will be provided with a text, and you will output a JSON object containing the following information:
-        Format:
-        Critique: <your_critique>
-        """
-        response = self.query(prompt, text)
-        response = json.loads(response)
-        critique = response["Critique"]
-        return critique
+        try:
+            response = json.loads(response)
+            label = response.get("Label", -1)
+            explanation = response.get("Explanation", "No explanation provided")
+        except json.JSONDecodeError:
+            return "Unknown", "Failed to parse JSON response"
     
-    def adjudicator_task(self, text, annotation, explanation, critique):
-        prompt = f"""
-        Text: "{text}"
-        Initial annotation: {annotation}
-        Explanation: {explanation}
-        Challenger's critique: {critique}
-        Your task is to make a final decision by weighing both perspectives.
-        Provide the final classification for the given text with one of the following types: {self.labels}. Only use the provided types.
-        You will be provided with a text, and you will output a JSON object containing the following information:
-
-        Format:
-        Final Label: <your_predicted_final_label>
-        """
-        response = self.query(prompt, text)
-        response = json.loads(response)    
-        label = response["Final Label"]
-        return label
+        return label, explanation

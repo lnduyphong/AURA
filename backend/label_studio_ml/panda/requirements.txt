@@ -1,0 +1,17 @@
+label-studio
+numpy
+pandas
+openai
+scikit-learn
+torch
+tqdm
+label_studio_sdk
+transformers
+Flask
+colorama
+requests
+semver
+pillow
+gunicorn
+pytest
+pytest-cov

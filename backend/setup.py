@@ -2,11 +2,6 @@ import setuptools
 import label_studio_ml
 
 print(label_studio_ml.package_name, label_studio_ml.__version__)
-
-# Readme
-with open("README.md", "r", encoding="utf-8") as f:
-    long_description = f.read()
-
 # Module dependencies
 with open("requirements.txt") as f:
     requirements = f.read().splitlines()
@@ -17,7 +12,7 @@ setuptools.setup(
     author="Heartex",
     author_email="hello@heartex.com",
     description="Label Studio ML backend",
-    long_description=long_description,
+#    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/heartexlabs/label-studio-ml-backend",
     packages=setuptools.find_packages(),

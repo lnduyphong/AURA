@@ -79,9 +79,10 @@ def calculate_threshold(pred_labels, current_labels, category, category_weight):
 
 
 def run(data, n_labels, k_neighbors=10):
-    n_instances = len(data)
+    # print(data)
+    n_instances = data.shape[0]
     y = data['weak_label'].values
-    X = data.drop(['weak_label'], axis=1).values
+    X = data.drop(['weak_label', 'label'], axis=1).values
     knn_model= KNeighborsClassifier(n_neighbors=k_neighbors + 1)
     knn_model.fit(X, y)
 

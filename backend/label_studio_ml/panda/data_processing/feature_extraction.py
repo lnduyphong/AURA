@@ -50,3 +50,25 @@ def extract_text_feature(dataset, batch_size, encode_model):
     # embedded_data['weak_label'] = labels
     
     return embeddings
+
+def extract_image_feature(dataset, batch_size, encode_model):
+    def embed_img_batch(batch_imgs, processor, model):
+        inputs = processor(batch_imgs, return_tensors='pt')
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+        with torch.no_grad():
+            outputs = model(**inputs)
+        embeddings = outputs.last_hidden_state.mean(dim=1)
+        return embeddings.cpu().numpy()
+    
+    print(f"Using device: {device}")
+    processor = AutoImageProcessor.from_pretrained(encode_model, do_rescale=False)
+    model = AutoModel.from_pretrained(encode_model).to(device)
+
+    embeddings = []
+    data_loader = data.DataLoader(dataset, batch_size=batch_size)
+    for imgs, _ in tqdm(data_loader):
+        batch_embeddings = embed_img_batch(imgs, processor, model)
+        embeddings.append(batch_embeddings)
+
+    embeddings = np.vstack(embeddings)
+    return embeddings

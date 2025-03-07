@@ -23,24 +23,26 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
         git; \
     apt-get autoremove -y
 
-# install base requirements
+# Install base requirements
 COPY requirements-base.txt .
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     pip install -r requirements-base.txt
 
-# install custom requirements
+# Install custom requirements
 COPY requirements.txt .
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     pip install -r requirements.txt
 
-# install test requirements if needed
+# Install test requirements if needed
 COPY requirements-test.txt .
-# build only when TEST_ENV="true"
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     if [ "$TEST_ENV" = "true" ]; then \
       pip install -r requirements-test.txt; \
     fi
 
+RUN pip install label-studio-ml
+
+# Copy the entire project directory
 COPY . .
 
 EXPOSE 9090
