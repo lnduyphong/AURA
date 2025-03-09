@@ -1,9 +1,7 @@
 # 🏷️ Hướng Dẫn Cài Đặt AURA tích hợp với Label-Studio
 
 ## 📌 Giới Thiệu
-**Label Studio** là một công cụ mạnh mẽ để gán nhãn dữ liệu cho Machine Learning.  
-Hướng dẫn này sẽ giúp bạn cài đặt, chạy Label Studio, kết nối với mô hình và sử dụng để gán nhãn dữ liệu.
-
+**AURA** một giải pháp tiên tiến giúp tự động hóa quy trình gán nhãn dữ liệu, phát hiện và sửa lỗi nhãn sai. Dự án này được phát triển trong khuôn khổ Hội nghị Sinh viên Nghiên cứu Khoa học cấp Khoa năm học 2024-2025 tại Trường Đại học Công nghệ – ĐHQGHN.
 ---
 
 ## ⚙️ 1. Cài Đặt Backend
