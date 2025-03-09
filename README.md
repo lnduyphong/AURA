@@ -1,7 +1,8 @@
 # 🏷️ Hướng Dẫn Cài Đặt AURA tích hợp với Label-Studio
 
 ## 📌 Giới Thiệu
-**AURA** một giải pháp tiên tiến giúp tự động hóa quy trình gán nhãn dữ liệu, phát hiện và sửa lỗi nhãn sai. Dự án này được phát triển trong khuôn khổ Hội nghị Sinh viên Nghiên cứu Khoa học cấp Khoa năm học 2024-2025 tại Trường Đại học Công nghệ – ĐHQGHN.
+**AURA**, một giải pháp tiên tiến giúp tự động hóa quy trình gán nhãn dữ liệu, phát hiện và sửa lỗi nhãn sai. Dự án này được phát triển trong khuôn khổ Hội nghị Sinh viên Nghiên cứu Khoa học cấp Khoa năm học 2024-2025 tại Trường Đại học Công nghệ – ĐHQGHN.
+
 ---
 
 ## ⚙️ 1. Cài Đặt Backend
