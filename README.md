@@ -18,8 +18,17 @@
 cd backend
 pip install -e .
 ```
+### 2. Import OPENAI API
+Với linux/macOS:
+```bash
+export OPENAI_API_KEY="your_api_key_here"
+```
+Với window:
+```bash
+setx OPENAI_API_KEY "your_api_key_here"
+```
 
-### 2. Khởi Chạy Mô Hình (Model)
+### 3. Khởi Chạy Mô Hình (Model)
 Chạy mô hình bằng Docker Compose:
 
 ```bash
@@ -29,7 +38,7 @@ docker compose up -d
 
 URL của model: http://localhost:9090
 
-### 3. Mở Giao Diện Label Studio
+### 4. Mở Giao Diện Label Studio
 Sau khi backend và mô hình đã được khởi động, mở giao diện Label Studio bằng lệnh:
 
 ```bash
@@ -37,9 +46,22 @@ label-studio
 ```
 Truy cập giao diện tại: http://localhost:8080
 
+### 
+
 ### 4. Kết Nối Label Studio Với Aura
 Truy cập http://localhost:8080
-Tạo project, vào phần setting để kết nối với model aura
+Tạo project
+![image](https://github.com/user-attachments/assets/ffe87ebd-f53a-411a-a17b-0eea92aee79e)
+Upload data cần gán nhãn
+![image](https://github.com/user-attachments/assets/2e1e749d-587d-4f4e-a0fa-a69e73314c03)
+Lựa chọn bài toàn
+![image](https://github.com/user-attachments/assets/4ad28342-b600-4be1-87fc-397043cf7327)
+
+Model AURA phục vụ bài toán text classification
+Ở đây chúng tôi sample sẵn 2 bộ data Ag'news, Clickbait 
+
+
+Để kết nối với model: Chọn project -> setting -> Model
 ![image](https://github.com/user-attachments/assets/6dcaae5e-81db-45a4-a235-8bdb3461098a)
 
 ![image](https://github.com/user-attachments/assets/7d1ae12b-4599-4899-9de0-f27eca60592e)
