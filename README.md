@@ -29,14 +29,14 @@ setx OPENAI_API_KEY "your_api_key_here"
 ```
 
 ### 3. Khởi Chạy AURA
-Chạy mô hình bằng Docker Compose:
+Chạy AURA bằng Docker:
 
 ```bash
 cd panda
 docker compose up -d
 ```
 
-URL mặc định của model khi chạy với Docker có sẵn: http://localhost:9090
+URL mặc định của AURA khi chạy với Docker có sẵn: http://localhost:9090
 
 ### 4. Mở Giao Diện Label Studio
 Sau khi backend và mô hình đã được khởi động, mở giao diện Label Studio bằng lệnh:
