@@ -18,7 +18,7 @@
 cd backend
 pip install -e .
 ```
-### 2. Import OPENAI API
+### 2. Thêm OPENAI API vào môi trường
 Với linux/macOS:
 ```bash
 export OPENAI_API_KEY="your_api_key_here"
@@ -28,7 +28,7 @@ Với window:
 setx OPENAI_API_KEY "your_api_key_here"
 ```
 
-### 3. Khởi Chạy Mô Hình (Model)
+### 3. Khởi Chạy AURA
 Chạy mô hình bằng Docker Compose:
 
 ```bash
@@ -36,7 +36,7 @@ cd panda
 docker compose up -d
 ```
 
-URL của model: http://localhost:9090
+URL mặc định của model khi chạy với Docker có sẵn: http://localhost:9090
 
 ### 4. Mở Giao Diện Label Studio
 Sau khi backend và mô hình đã được khởi động, mở giao diện Label Studio bằng lệnh:
@@ -44,31 +44,34 @@ Sau khi backend và mô hình đã được khởi động, mở giao diện Lab
 ```bash
 label-studio
 ```
-Truy cập giao diện tại: http://localhost:8080
 
-### 
-
-### 4. Kết Nối Label Studio Với Aura
-Truy cập http://localhost:8080
-Tạo project
+# Trải nghiệm AURA
+#### Bước 1: Truy cập http://localhost:8080
+#### Bước 2: Tạo project
 ![image](https://github.com/user-attachments/assets/ffe87ebd-f53a-411a-a17b-0eea92aee79e)
-Upload data cần gán nhãn
+#### Bước 3: Tải lên dữ liệu cần gán nhãn
 ![image](https://github.com/user-attachments/assets/2e1e749d-587d-4f4e-a0fa-a69e73314c03)
-Lựa chọn bài toán
+#### Bước 4: Lựa chọn bài toán
 ![image](https://github.com/user-attachments/assets/4ad28342-b600-4be1-87fc-397043cf7327)
 
+#### Bước 5: Thêm nhẫn cho dữ liệu
 Model AURA phục vụ bài toán text classification
-Ở đây chúng tôi sample sẵn 2 bộ data Ag'news, Clickbait 
-Có thể sử dụng file labels.txt để điền các nhãn dữ liệu, sau khi điền đầy đủ thông tin, click Save
+Ở đây chúng tôi sample sẵn 2 bộ data AgNews, Clickbait 
+Có thể sử dụng file labels.txt để điền các nhãn dữ liệu, sau khi điền đầy đủ thông tin, ấn vào Save để lưu
 ![image](https://github.com/user-attachments/assets/8e29d57b-ef37-42b7-8703-61312d00517b)
 
-Sau khi hoàn thành qúa trình chuẩn bị data, để kết nối với model: Chọn project -> setting -> Model
+#### Bước 6: Kết nối với AURA
+##### Chọn Project -> Setting -> Model
 ![image](https://github.com/user-attachments/assets/6dcaae5e-81db-45a4-a235-8bdb3461098a)
 
+##### Thêm URL của AURA đã được bật
 ![image](https://github.com/user-attachments/assets/7d1ae12b-4599-4899-9de0-f27eca60592e)
 
-# Sử dụng AURA
-Khi đã kết nối thành công, lựa chọn các điểm dữ liệu mong muốn gán nhãn, click Retrivel Predictions
+#### Bước 7: Gán nhãn
+##### Khi đã kết nối thành công, lựa chọn các điểm dữ liệu mong muốn gán nhãn và chọn Retrivel Predictions
 ![image](https://github.com/user-attachments/assets/ca81086c-70b4-43c2-891d-317994dbd55c)
 
+# Liên hệ
+Nếu bạn có bất kỳ câu hỏi, ý kiến ​​hoặc đề xuất nào, vui lòng liên hệ với chúng tôi.
 
+Email: 22028164@vnu.edu.vn
