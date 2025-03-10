@@ -59,9 +59,10 @@ Lựa chọn bài toàn
 
 Model AURA phục vụ bài toán text classification
 Ở đây chúng tôi sample sẵn 2 bộ data Ag'news, Clickbait 
+Có thể sử dụng file labels.txt để điền các nhãn dữ liệu, sau khi điền đầy đủ thông tin, click Save
+![image](https://github.com/user-attachments/assets/8e29d57b-ef37-42b7-8703-61312d00517b)
 
-
-Để kết nối với model: Chọn project -> setting -> Model
+Sau khi hoàn thành qúa trình chuẩn bị data, để kết nối với model: Chọn project -> setting -> Model
 ![image](https://github.com/user-attachments/assets/6dcaae5e-81db-45a4-a235-8bdb3461098a)
 
 ![image](https://github.com/user-attachments/assets/7d1ae12b-4599-4899-9de0-f27eca60592e)
