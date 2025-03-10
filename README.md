@@ -54,7 +54,7 @@ Tạo project
 ![image](https://github.com/user-attachments/assets/ffe87ebd-f53a-411a-a17b-0eea92aee79e)
 Upload data cần gán nhãn
 ![image](https://github.com/user-attachments/assets/2e1e749d-587d-4f4e-a0fa-a69e73314c03)
-Lựa chọn bài toàn
+Lựa chọn bài toán
 ![image](https://github.com/user-attachments/assets/4ad28342-b600-4be1-87fc-397043cf7327)
 
 Model AURA phục vụ bài toán text classification
