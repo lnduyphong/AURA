@@ -11,9 +11,8 @@ import json
 import base64
 
 
-OPENAI_API_KEY = "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"
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI()
 class agent:
     def __init__(self, model_name, labels):
         self.model_name = model_name
